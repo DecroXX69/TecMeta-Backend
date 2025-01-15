@@ -5,12 +5,17 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const contactRoutes = require('./routes/contactRoutes');
 require('dotenv').config();
-
+const cors = require('cors');
 // Initialize express app
 const app = express();
 
 // Middleware to parse JSON request body
 app.use(bodyParser.json());
+app.use(cors({
+  origin: '*', // Allow all origins; for production, specify your frontend domain
+  methods: ['GET', 'POST'], // Allow specific methods
+  allowedHeaders: ['Content-Type'],
+}));
 
 // MongoDB connection (replace with your actual MongoDB connection string)
 mongoose.connect(process.env.MONGODB_URI, {
