@@ -1,5 +1,6 @@
 
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 const contactSchema = new mongoose.Schema({
     firstname: { type: String, required: true },
