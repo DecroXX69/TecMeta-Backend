@@ -5,10 +5,10 @@ const nodemailer = require('nodemailer');
 
 // Create a new contact message
 async function createContact(req, res) {
-  const { firstname, lastname, email, phone, message } = req.body;
+  const { firstname, lastname, email, phone,service, message } = req.body;
 
   // Validate required fields
-  if (!firstname || !lastname || !email || !phone || !message) {
+  if (!firstname || !lastname || !email || !phone || !service || !message) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
@@ -19,6 +19,7 @@ async function createContact(req, res) {
       lastname,
       email,
       phone,
+      service,
       message,
     });
 
@@ -47,6 +48,7 @@ async function createContact(req, res) {
       Lastname: ${lastname}
       Email: ${email}
       Phone: ${phone}
+      Service: ${service}
       
       
       Message:
