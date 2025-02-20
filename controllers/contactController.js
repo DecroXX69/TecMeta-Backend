@@ -40,7 +40,8 @@ async function createContact(req, res) {
               // Prepare the email content
               const mailOptions = {
                   from: 'admin@tecmetaverse.com',
-                  to: 'info@tecmetaverse.com', // Replace with the email address you want to send to
+                  to: 'ajinkya.gajarmal@gmail.com', // Replace with the email address you want to send to
+                  cc: 'sanatan.bhramhane@tecmetaverse.com', // Replace with the email address you want to send to
                   subject: 'New Contact Us Form Submission',
                   text: `New contact message received:
       
