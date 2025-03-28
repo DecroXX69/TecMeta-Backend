@@ -1,96 +1,143 @@
-// controllers/contactController.js
-
 const Contact = require('../models/contactModel');
 const nodemailer = require('nodemailer');
 
-// Create a new contact message
+// Create a new contact message (generic method for both contact form and marketing popup)
 async function createContact(req, res) {
-  const { firstname, lastname, email, phone,service, message } = req.body;
+    const { 
+        name, // For marketing popup
+        firstname, // For contact form
+        lastname, 
+        email, 
+        phone, 
+        service, 
+        message 
+    } = req.body;
 
-  // Validate required fields
-  if (!firstname || !lastname || !email || !phone || !service || !message) {
-    return res.status(400).json({ error: 'All fields are required' });
-  }
+    // Determine source and handle different input formats
+    const source = req.body.source || 'contact-form';
+    let contactData = {};
 
-  try {
-    // Create a new contact instance
-    const newContact = new Contact({
-      firstname,
-      lastname,
-      email,
-      phone,
-      service,
-      message,
-    });
+    if (source === 'marketing-popup') {
+        // Handle marketing popup submission
+        if (!name || !email || !phone) {
+            return res.status(400).json({ error: 'Required fields are missing' });
+        }
 
-    // Save the contact to the database
-    const savedContact = await newContact.save();
+        // Split name into first and last name if possible
+        const nameParts = name.trim().split(' ');
+        contactData = {
+            firstname: nameParts[0],
+            lastname: nameParts.slice(1).join(' ') || '',
+            email,
+            phone,
+            source: 'marketing-popup'
+        };
+    } else {
+        // Handle traditional contact form
+        if (!firstname || !lastname || !email || !phone || !service || !message) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
 
-                // Send email to the desired email address
-                const transporter = nodemailer.createTransport({
-                  host: 'smtppro.zoho.in',  // or you can use another email service like Outlook, SendGrid, etc.
-                  port: 465,  // SSL port
-                  secure: true,
-                  auth: {
-                      user: 'admin@tecmetaverse.com',  // Replace with your email address
-                      pass: 'NZjaPHiBezAj',   // Replace with your email password (or app password if 2FA enabled)
-                  }
-              });
-      
-              // Prepare the email content
-              const mailOptions = {
-                  from: 'admin@tecmetaverse.com',
-                  to: 'info@tecmetaverse.com', // Replace with the email address you want to send to
-                  subject: 'New Contact Us Form Submission',
-                  text: `New contact message received:
-      
-      Firstname: ${firstname}
-      Lastname: ${lastname}
-      Email: ${email}
-      Phone: ${phone}
-      Service: ${service}
-      
-      
-      Message:
-      ${message}`
-              };
-      
-              // Send the email
-              transporter.sendMail(mailOptions, (error, info) => {
-                  if (error) {
-                      console.error('Error sending email:', error);
-                  } else {
-                      console.log('Email sent: ' + info.response);
-                  }
-              });
-      
-                  // Send response with success message and saved data
-                  res.status(201).json({
-                      message: 'Contact message created successfully',
-                      data: savedContact
-                  });
-              } catch (error) {
-                  // Handle errors, like validation errors or DB connection issues
-                  console.error(error);
-                  res.status(500).json({
-                      message: 'Error creating contact message',
-                      error: error.message
-                  });
-              }
-          };
+        contactData = {
+            firstname,
+            lastname,
+            email,
+            phone,
+            service,
+            message,
+            source: 'contact-form'
+        };
+    }
+
+    try {
+        // Create a new contact instance
+        const newContact = new Contact(contactData);
+
+        // Save the contact to the database
+        const savedContact = await newContact.save();
+
+        // Send email notification
+        await sendContactNotificationEmail(contactData);
+
+        // Send response with success message and saved data
+        res.status(201).json({
+            message: 'Contact message created successfully',
+            data: savedContact
+        });
+    } catch (error) {
+        // Handle errors, like validation errors or DB connection issues
+        console.error(error);
+        res.status(500).json({
+            message: 'Error creating contact message',
+            error: error.message
+        });
+    }
+}
+
+// Helper function to send email notification
+async function sendContactNotificationEmail(contactData) {
+    try {
+        // Create transporter
+        const transporter = nodemailer.createTransport({
+            host: 'smtppro.zoho.in',
+            port: 465,
+            secure: true,
+            auth: {
+                user: 'admin@tecmetaverse.com',
+                pass: 'NZjaPHiBezAj',
+            }
+        });
+
+        // Prepare email content based on source
+        const mailSubject = contactData.source === 'marketing-popup' 
+            ? 'New Marketing Popup Lead' 
+            : 'New Contact Us Form Submission';
+
+        const mailText = contactData.source === 'marketing-popup' 
+            ? `New Marketing Popup Lead:
+
+Name: ${contactData.firstname} ${contactData.lastname}
+Email: ${contactData.email}
+Phone: ${contactData.phone}` 
+            : `New contact message received:
+
+Firstname: ${contactData.firstname}
+Lastname: ${contactData.lastname}
+Email: ${contactData.email}
+Phone: ${contactData.phone}
+Service: ${contactData.service}
+
+Message:
+${contactData.message}`;
+
+        // Prepare mail options
+        const mailOptions = {
+            from: 'admin@tecmetaverse.com',
+            to: 'info@tecmetaverse.com',
+            subject: mailSubject,
+            text: mailText
+        };
+
+        // Send the email
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Email sent: ' + info.response);
+    } catch (error) {
+        console.error('Error sending email:', error);
+    }
+}
 
 // Get all contact messages
 async function getContacts(req, res) {
     try {
-      const contacts = await Contact.find(); // Retrieve all contact messages from the database
-      res.status(200).json({
-        success: true,
-        data: contacts,
-      });
+        const contacts = await Contact.find(); // Retrieve all contact messages from the database
+        res.status(200).json({
+            success: true,
+            data: contacts,
+        });
     } catch (error) {
-      res.status(500).json({ error: 'There was an error fetching the contact messages.' });
+        res.status(500).json({ error: 'There was an error fetching the contact messages.' });
     }
-  }
+}
 
-// Export the function so it can be used in other files
+// Export the functions
 module.exports = { createContact, getContacts };
